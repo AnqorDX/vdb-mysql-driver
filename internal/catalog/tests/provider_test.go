@@ -52,7 +52,7 @@ type stubRowsProvider struct{}
 
 var _ rows.Provider = (*stubRowsProvider)(nil)
 
-func (stubRowsProvider) FetchRows(_ *gmssql.Context, _ string, _ []gmssql.Row, _ gmssql.Schema) ([]map[string]any, error) {
+func (stubRowsProvider) FetchRows(_ *gmssql.Context, _ string, _ gmssql.RowIter, _ gmssql.Schema) ([]map[string]any, error) {
 	return nil, nil
 }
 func (stubRowsProvider) CommitRows(_ *gmssql.Context, _ string, _ []map[string]any) ([]map[string]any, error) {

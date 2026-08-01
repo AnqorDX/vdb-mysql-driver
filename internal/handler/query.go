@@ -3,6 +3,9 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log"
+	"runtime"
+	"runtime/debug"
 
 	vitessmysql "github.com/dolthub/vitess/go/mysql"
 	"github.com/dolthub/vitess/go/sqltypes"
@@ -23,6 +26,24 @@ func (h *Handler) ComQuery(
 	query string,
 	callback vitessmysql.ResultSpoolFn,
 ) error {
+	// FreeOSMemory must be the first defer so it fires last (LIFO),
+	// after rowIter.Close() has released all query data.
+	defer debug.FreeOSMemory()
+
+	var memBefore runtime.MemStats
+	runtime.ReadMemStats(&memBefore)
+
+	defer func() {
+		runtime.GC()
+		debug.FreeOSMemory()
+		var memAfter runtime.MemStats
+		runtime.ReadMemStats(&memAfter)
+		log.Printf("[mem] query=%q alloc_before=%dMB alloc_after=%dMB heap_inuse=%dMB heap_idle=%dMB",
+			query[:min(len(query), 64)],
+			memBefore.Alloc/1024/1024, memAfter.Alloc/1024/1024,
+			memAfter.HeapInuse/1024/1024, memAfter.HeapIdle/1024/1024)
+	}()
+
 	sess, ok := c.ClientData.(*session.Session)
 	if !ok || sess == nil {
 		return fmt.Errorf("no session for connection %d", c.ConnectionID)
@@ -46,12 +67,17 @@ func (h *Handler) ComQuery(
 
 	schema, rowIter, _, execErr := h.engine.Query(sqlCtx, execQuery)
 
+	// Always close rowIter. GMS may return a non-nil iterator even on error,
+	// and leaving it open leaks the internal partition iterator, any data
+	// buffered inside GMS, and prevents GC from reclaiming that memory.
+	if rowIter != nil {
+		defer rowIter.Close(sqlCtx)
+	}
+
 	var rowsAffected int64
 	var spoolErr error
 
 	if execErr == nil {
-		defer rowIter.Close(sqlCtx)
-
 		// Wrap the callback to accumulate the affected-row count for
 		// the QueryCompleted event payload.
 		wrappedCallback := func(res *sqltypes.Result, more bool) error {
@@ -109,6 +135,22 @@ func (h *Handler) ComStmtExecute(
 	prepare *vitessmysql.PrepareData,
 	callback func(*sqltypes.Result) error,
 ) error {
+	defer debug.FreeOSMemory()
+
+	var memBefore runtime.MemStats
+	runtime.ReadMemStats(&memBefore)
+
+	defer func() {
+		runtime.GC()
+		debug.FreeOSMemory()
+		var memAfter runtime.MemStats
+		runtime.ReadMemStats(&memAfter)
+		log.Printf("[mem] stmt=%q alloc_before=%dMB alloc_after=%dMB heap_inuse=%dMB heap_idle=%dMB",
+			prepare.PrepareStmt[:min(len(prepare.PrepareStmt), 64)],
+			memBefore.Alloc/1024/1024, memAfter.Alloc/1024/1024,
+			memAfter.HeapInuse/1024/1024, memAfter.HeapIdle/1024/1024)
+	}()
+
 	sess, ok := c.ClientData.(*session.Session)
 	if !ok || sess == nil {
 		return fmt.Errorf("no session for connection %d", c.ConnectionID)
@@ -127,7 +169,8 @@ func (h *Handler) ComStmtExecute(
 	}
 	defer rowIter.Close(sqlCtx)
 
-	return castError(spoolResult(sqlCtx, schema, rowIter, func(res *sqltypes.Result, more bool) error {
+	err = castError(spoolResult(sqlCtx, schema, rowIter, func(res *sqltypes.Result, more bool) error {
 		return callback(res)
 	}))
+	return err
 }

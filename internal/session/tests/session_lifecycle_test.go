@@ -7,6 +7,7 @@ import (
 	gmssql "github.com/dolthub/go-mysql-server/sql"
 	vitessmysql "github.com/dolthub/vitess/go/mysql"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
+	"github.com/virtual-db/vdb-core/types"
 	. "github.com/virtual-db/vdb-mysql-driver/internal/session"
 )
 
@@ -65,7 +66,7 @@ func (s *stubEventBridge) TransactionRolledBack(connID uint32, savepoint string)
 func (s *stubEventBridge) QueryReceived(_ uint32, q, _ string) (string, error) { return q, nil }
 func (s *stubEventBridge) QueryCompleted(_ uint32, _ string, _ int64, _ error) {}
 
-func (s *stubEventBridge) RowsFetched(_ uint32, _ string, r []map[string]any) ([]map[string]any, error) {
+func (s *stubEventBridge) RowsFetched(_ uint32, _ string, r types.RecordIter) (types.RecordIter, error) {
 	return r, nil
 }
 func (s *stubEventBridge) RowsReady(_ uint32, _ string, r []map[string]any) ([]map[string]any, error) {

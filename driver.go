@@ -148,5 +148,9 @@ func mustOpenDB(dsn string) *sql.DB {
 	if err != nil {
 		panic(fmt.Sprintf("driver: failed to open source DB: %v", err))
 	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxIdleTime(30 * time.Second)
+	db.SetConnMaxLifetime(5 * time.Minute)
 	return db
 }

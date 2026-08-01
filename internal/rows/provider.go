@@ -3,6 +3,8 @@
 package rows
 
 import (
+	"fmt"
+
 	gmssql "github.com/dolthub/go-mysql-server/sql"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
 )
@@ -12,8 +14,11 @@ import (
 //
 // All implementations must be safe for concurrent use.
 type Provider interface {
-	// FetchRows is called after rows have been read from the source database.
-	FetchRows(ctx *gmssql.Context, table string, rows []gmssql.Row, schema gmssql.Schema) ([]map[string]any, error)
+	// FetchRows streams rows from a RowIter source, converts them to
+	// map[string]any records, and invokes the RowsFetched callback. The
+	// iterator is consumed lazily — rows are converted one at a time rather
+	// than materialising the full result set upfront.
+	FetchRows(ctx *gmssql.Context, table string, iter gmssql.RowIter, schema gmssql.Schema) ([]map[string]any, error)
 
 	// CommitRows is called after the delta overlay has been applied and the
 	// final row set is ready to return to the client.
@@ -50,17 +55,40 @@ func NewGMSProvider(events bridge.EventBridge) *GMSProvider {
 	return &GMSProvider{events: events}
 }
 
-// FetchRows converts raw GMS rows to []map[string]any and delegates to
-// events.RowsFetched.
+// FetchRows streams rows from the source iterator through the delta overlay
+// and returns the merged result as []map[string]any. The source iterator is
+// never materialised — it is wrapped as a RecordIter and streamed through the
+// overlay pipeline. The overlay result is consumed lazily and materialised
+// only into the final []map[string]any required by the DriverAPI contract.
+// The source iterator is always closed when FetchRows returns.
 func (p *GMSProvider) FetchRows(
-	ctx *gmssql.Context, table string, rows []gmssql.Row, schema gmssql.Schema,
+	ctx *gmssql.Context, table string, iter gmssql.RowIter, schema gmssql.Schema,
 ) ([]map[string]any, error) {
-	cols := SchemaColumns(schema)
-	records := make([]map[string]any, len(rows))
-	for i, row := range rows {
-		records[i] = RowToMap(row, cols)
+	defer iter.Close(ctx)
+
+	// Wrap the GMS RowIter as a payloads.RecordIter for streaming.
+	srcIter := &gmsRowIterAdapter{iter: iter, schema: schema}
+
+	// Stream through the overlay pipeline.
+	resultIter, err := p.events.RowsFetched(connIDFromCtx(ctx), table, srcIter)
+	if err != nil {
+		return nil, err
 	}
-	return p.events.RowsFetched(connIDFromCtx(ctx), table, records)
+	defer resultIter.Close()
+
+	// Consume the result iterator and materialise into []map[string]any.
+	var records []map[string]any
+	for {
+		rec, err := resultIter.Next()
+		if err != nil {
+			break // EOF or error — both stop iteration
+		}
+		if rec == nil {
+			break
+		}
+		records = append(records, rec)
+	}
+	return p.events.RowsReady(connIDFromCtx(ctx), table, records)
 }
 
 // CommitRows delegates to events.RowsReady with the final record set.
@@ -115,4 +143,40 @@ func connIDFromCtx(ctx *gmssql.Context) uint32 {
 		return 0
 	}
 	return ctx.Session.ID()
+}
+
+// gmsRowIterAdapter wraps a GMS gmssql.RowIter as a payloads.RecordIter,
+// converting rows to map[string]any on the fly. This bridges the GMS
+// streaming world with the vdb-core RecordIter interface.
+type gmsRowIterAdapter struct {
+	iter   gmssql.RowIter
+	schema gmssql.Schema
+	cols   []string
+	closed bool
+}
+
+func (a *gmsRowIterAdapter) Next() (map[string]any, error) {
+	if a.closed {
+		return nil, fmt.Errorf("EOF")
+	}
+	// Lazy-init column names from the schema.
+	if a.cols == nil {
+		a.cols = SchemaColumns(a.schema)
+	}
+	row, err := a.iter.Next(nil) // context not used by sourceRowIter
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return nil, fmt.Errorf("EOF")
+	}
+	return RowToMap(row, a.cols), nil
+}
+
+func (a *gmsRowIterAdapter) Close() error {
+	if a.closed {
+		return nil
+	}
+	a.closed = true
+	return a.iter.Close(nil)
 }

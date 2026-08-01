@@ -5,6 +5,8 @@
 // The driver package adapts core.DriverAPI to EventBridge via apiAdapter.
 package bridge
 
+import "github.com/virtual-db/vdb-core/types"
+
 // EventBridge is the contract the GMS session, query interceptor, and table
 // implementations use to signal lifecycle events.
 //
@@ -39,10 +41,11 @@ type EventBridge interface {
 	// rows have been sent to the client.
 	QueryCompleted(connID uint32, query string, rowsAffected int64, err error)
 
-	// RowsFetched is called with the full row slice after rows have been read
-	// from the source database. The handler may inspect, augment, filter, or
-	// replace the slice.
-	RowsFetched(connID uint32, table string, records []map[string]any) ([]map[string]any, error)
+	// RowsFetched is called with a streaming iterator over rows just read from
+	// the source database, before the delta overlay is applied. The handler
+	// must return a streaming iterator over the merged result. Both the input
+	// and output iterators must be closed by the caller.
+	RowsFetched(connID uint32, table string, records types.RecordIter) (types.RecordIter, error)
 
 	// RowsReady is called with the final row slice after the delta overlay has
 	// been applied and the rows are ready to return to the client.

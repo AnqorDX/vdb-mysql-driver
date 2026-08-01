@@ -57,3 +57,5 @@ require (
 )
 
 replace github.com/virtual-db/vdb-core => ../vdb-core
+
+replace github.com/dolthub/go-mysql-server => ../../Libraries/go-mysql-server

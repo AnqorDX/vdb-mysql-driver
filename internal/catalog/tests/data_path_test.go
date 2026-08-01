@@ -56,7 +56,7 @@ type captureRowsProvider struct {
 	seedValues []any
 }
 
-func (c *captureRowsProvider) FetchRows(_ *gmssql.Context, _ string, _ []gmssql.Row, schema gmssql.Schema) ([]map[string]any, error) {
+func (c *captureRowsProvider) FetchRows(_ *gmssql.Context, _ string, _ gmssql.RowIter, schema gmssql.Schema) ([]map[string]any, error) {
 	c.fetchSchema = schema
 	if c.seedValues == nil || len(schema) == 0 {
 		return nil, nil
@@ -342,7 +342,7 @@ type insertCountProvider struct {
 	rows []map[string]any
 }
 
-func (p *insertCountProvider) FetchRows(_ *gmssql.Context, _ string, _ []gmssql.Row, _ gmssql.Schema) ([]map[string]any, error) {
+func (p *insertCountProvider) FetchRows(_ *gmssql.Context, _ string, _ gmssql.RowIter, _ gmssql.Schema) ([]map[string]any, error) {
 	return p.rows, nil
 }
 func (p *insertCountProvider) CommitRows(_ *gmssql.Context, _ string, records []map[string]any) ([]map[string]any, error) {

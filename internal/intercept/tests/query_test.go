@@ -12,6 +12,7 @@ import (
 	sqltypes "github.com/dolthub/vitess/go/sqltypes"
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
+	"github.com/virtual-db/vdb-core/types"
 )
 
 // ---------------------------------------------------------------------------
@@ -47,7 +48,7 @@ func (s *stubEventBridge) QueryCompleted(connID uint32, query string, rowsAffect
 	}
 }
 
-func (s *stubEventBridge) RowsFetched(_ uint32, _ string, r []map[string]any) ([]map[string]any, error) {
+func (s *stubEventBridge) RowsFetched(_ uint32, _ string, r types.RecordIter) (types.RecordIter, error) {
 	return r, nil
 }
 func (s *stubEventBridge) RowsReady(_ uint32, _ string, r []map[string]any) ([]map[string]any, error) {

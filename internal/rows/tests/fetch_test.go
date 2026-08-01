@@ -7,13 +7,35 @@ import (
 	gmssql "github.com/dolthub/go-mysql-server/sql"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
 	. "github.com/virtual-db/vdb-mysql-driver/internal/rows"
+	"github.com/virtual-db/vdb-core/types"
 )
+
+// sliceIter wraps a []gmssql.Row as a gmssql.RowIter for test convenience.
+type sliceIter struct {
+	rows  []gmssql.Row
+	index int
+}
+
+func (s *sliceIter) Next(_ *gmssql.Context) (gmssql.Row, error) {
+	if s.index >= len(s.rows) {
+		return nil, nil
+	}
+	row := s.rows[s.index]
+	s.index++
+	return row, nil
+}
+
+func (s *sliceIter) Close(_ *gmssql.Context) error { return nil }
+
+func newSliceIter(rows []gmssql.Row) gmssql.RowIter {
+	return &sliceIter{rows: rows}
+}
 
 // stubEventBridge implements bridge.EventBridge for GMSProvider tests.
 // Only the five methods GMSProvider actually calls have active function fields.
 // The remaining nine methods are no-op stubs that document the unused surface.
 type stubEventBridge struct {
-	rowsFetched func(connID uint32, table string, records []map[string]any) ([]map[string]any, error)
+	rowsFetched func(connID uint32, table string, records types.RecordIter) (types.RecordIter, error)
 	rowsReady   func(connID uint32, table string, records []map[string]any) ([]map[string]any, error)
 	rowInserted func(connID uint32, table string, record map[string]any) (map[string]any, error)
 	rowUpdated  func(connID uint32, table string, old, new map[string]any) (map[string]any, error)
@@ -22,7 +44,7 @@ type stubEventBridge struct {
 
 var _ bridge.EventBridge = (*stubEventBridge)(nil)
 
-func (s *stubEventBridge) RowsFetched(connID uint32, table string, records []map[string]any) ([]map[string]any, error) {
+func (s *stubEventBridge) RowsFetched(connID uint32, table string, records types.RecordIter) (types.RecordIter, error) {
 	if s.rowsFetched != nil {
 		return s.rowsFetched(connID, table, records)
 	}
@@ -83,6 +105,23 @@ func twoColSchema() gmssql.Schema {
 	return gmssql.Schema{{Name: "id"}, {Name: "val"}}
 }
 
+// recordSliceIter wraps a []map[string]any as a types.RecordIter for tests.
+type recordSliceIter struct {
+	records []map[string]any
+	index   int
+}
+
+func (s *recordSliceIter) Next() (map[string]any, error) {
+	if s.index >= len(s.records) {
+		return nil, nil
+	}
+	r := s.records[s.index]
+	s.index++
+	return r, nil
+}
+
+func (s *recordSliceIter) Close() error { return nil }
+
 // ---------------------------------------------------------------------------
 // FetchRows
 // ---------------------------------------------------------------------------
@@ -90,22 +129,30 @@ func twoColSchema() gmssql.Schema {
 func TestFetchRows_InvokesRowsFetchedCallback(t *testing.T) {
 	var called bool
 	b := &stubEventBridge{
-		rowsFetched: func(_ uint32, table string, recs []map[string]any) ([]map[string]any, error) {
+		rowsFetched: func(_ uint32, table string, recs types.RecordIter) (types.RecordIter, error) {
 			called = true
 			if table != "orders" {
 				t.Errorf("table: got %q, want %q", table, "orders")
 			}
-			if len(recs) != 2 {
-				t.Errorf("len(recs): got %d, want 2", len(recs))
+			var collected []map[string]any
+			for {
+				r, err := recs.Next()
+				if err != nil || r == nil {
+					break
+				}
+				collected = append(collected, r)
 			}
-			return recs, nil
+			if len(collected) != 2 {
+				t.Errorf("len(collected): got %d, want 2", len(collected))
+			}
+			return &recordSliceIter{records: collected}, nil
 		},
 	}
 
 	p := NewGMSProvider(b)
 	rawRows := []gmssql.Row{{1, "x"}, {2, "y"}}
 	schema := gmssql.Schema{{Name: "id"}, {Name: "val"}}
-	_, err := p.FetchRows(makeCtx(), "orders", rawRows, schema)
+	_, err := p.FetchRows(makeCtx(), "orders", newSliceIter(rawRows), schema)
 	if err != nil {
 		t.Fatalf("FetchRows error: %v", err)
 	}
@@ -119,7 +166,7 @@ func TestFetchRows_NilCallback_ReturnsUnmodified(t *testing.T) {
 	p := NewGMSProvider(&stubEventBridge{})
 	rawRows := []gmssql.Row{{1, "a"}}
 	schema := gmssql.Schema{{Name: "id"}, {Name: "v"}}
-	got, err := p.FetchRows(makeCtx(), "t", rawRows, schema)
+	got, err := p.FetchRows(makeCtx(), "t", newSliceIter(rawRows), schema)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -131,12 +178,12 @@ func TestFetchRows_NilCallback_ReturnsUnmodified(t *testing.T) {
 func TestFetchRows_CallbackError_IsReturned(t *testing.T) {
 	want := errors.New("fetch failed")
 	b := &stubEventBridge{
-		rowsFetched: func(_ uint32, _ string, _ []map[string]any) ([]map[string]any, error) {
+		rowsFetched: func(_ uint32, _ string, _ types.RecordIter) (types.RecordIter, error) {
 			return nil, want
 		},
 	}
 	p := NewGMSProvider(b)
-	_, err := p.FetchRows(makeCtx(), "t", []gmssql.Row{{1}}, gmssql.Schema{{Name: "id"}})
+	_, err := p.FetchRows(makeCtx(), "t", newSliceIter([]gmssql.Row{{1}}), gmssql.Schema{{Name: "id"}})
 	if !errors.Is(err, want) {
 		t.Errorf("expected %v, got %v", want, err)
 	}

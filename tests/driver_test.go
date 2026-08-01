@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	driver "github.com/virtual-db/vdb-mysql-driver"
+	"github.com/virtual-db/vdb-core/types"
 )
 
 type stubCoreAPI struct{}
@@ -15,7 +16,7 @@ func (s *stubCoreAPI) TransactionCommitted(_ uint32) error                     {
 func (s *stubCoreAPI) TransactionRolledBack(_ uint32, _ string)                {}
 func (s *stubCoreAPI) QueryReceived(_ uint32, query, _ string) (string, error) { return query, nil }
 func (s *stubCoreAPI) QueryCompleted(_ uint32, _ string, _ int64, _ error)     {}
-func (s *stubCoreAPI) RecordsSource(_ uint32, _ string, records []map[string]any) ([]map[string]any, error) {
+func (s *stubCoreAPI) RecordsSource(_ uint32, _ string, records types.RecordIter) (types.RecordIter, error) {
 	return records, nil
 }
 func (s *stubCoreAPI) RecordsMerged(_ uint32, _ string, records []map[string]any) ([]map[string]any, error) {

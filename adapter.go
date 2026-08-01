@@ -10,6 +10,7 @@ package driver
 
 import (
 	core "github.com/virtual-db/vdb-core"
+	"github.com/virtual-db/vdb-core/types"
 
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
 )
@@ -58,7 +59,7 @@ func (a *apiAdapter) QueryCompleted(connID uint32, query string, rowsAffected in
 
 // RowsFetched maps to core.DriverAPI.RecordsSource (rows just read from the
 // source DB before the delta overlay is applied).
-func (a *apiAdapter) RowsFetched(connID uint32, table string, records []map[string]any) ([]map[string]any, error) {
+func (a *apiAdapter) RowsFetched(connID uint32, table string, records types.RecordIter) (types.RecordIter, error) {
 	return a.api.RecordsSource(connID, table, records)
 }
 

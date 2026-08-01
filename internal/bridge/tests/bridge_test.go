@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	. "github.com/virtual-db/vdb-mysql-driver/internal/bridge"
+	"github.com/virtual-db/vdb-core/types"
 )
 
 // noopBridge satisfies EventBridge with safe no-op implementations of every
@@ -28,7 +29,7 @@ func (noopBridge) TransactionRolledBack(_ uint32, _ string) {}
 func (noopBridge) QueryReceived(_ uint32, q, _ string) (string, error) { return q, nil }
 func (noopBridge) QueryCompleted(_ uint32, _ string, _ int64, _ error) {}
 
-func (noopBridge) RowsFetched(_ uint32, _ string, r []map[string]any) ([]map[string]any, error) {
+func (noopBridge) RowsFetched(_ uint32, _ string, r types.RecordIter) (types.RecordIter, error) {
 	return r, nil
 }
 func (noopBridge) RowsReady(_ uint32, _ string, r []map[string]any) ([]map[string]any, error) {

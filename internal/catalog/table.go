@@ -80,26 +80,49 @@ func (t *Table) Partitions(_ *gmssql.Context) (gmssql.PartitionIter, error) {
 	return &singlePartitionIter{}, nil
 }
 
-// PartitionRows reads rows from the source database, passes them through
-// FetchRows and CommitRows on the rows.Provider, and returns a RowIter over
-// the final record set.
+// PartitionRows streams rows from the source database through the delta
+// overlay, and returns a RowIter over the final record set. Source rows are
+// consumed one at a time — the full result set is never materialised in
+// memory. The materialisation into []map[string]any happens inside FetchRows
+// (required by the DriverAPI contract) but the source []gmssql.Row slice is
+// eliminated.
 func (t *Table) PartitionRows(ctx *gmssql.Context, _ gmssql.Partition) (gmssql.RowIter, error) {
-	rawRows, err := t.fetchFromSource(ctx)
+	rawIter, err := t.fetchFromSource(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Expand source rows to the virtual schema length, filling added-column
-	// positions with nil or their declared default.
+	// Wrap with synthesiseIter to expand added columns lazily.
 	if t.delta != nil {
-		rawRows = synthesiseAddedCols(rawRows, t.delta, t.Schema())
+		rawIter = &synthesiseIter{
+			inner:         rawIter,
+			delta:         t.delta,
+			virtualSchema: t.Schema(),
+		}
 	}
 
 	if t.rows == nil {
-		return rows.NewIter(rawRows), nil
+		// No rows provider (unit tests) — drain the iterator into a slice.
+		if rawIter != nil {
+			defer rawIter.Close(ctx)
+		}
+		var all []gmssql.Row
+		if rawIter != nil {
+			for {
+				row, err := rawIter.Next(ctx)
+				if err != nil {
+					return nil, err
+				}
+				if row == nil {
+					break
+				}
+				all = append(all, row)
+			}
+		}
+		return rows.NewIter(all), nil
 	}
 
-	merged, err := t.rows.FetchRows(ctx, t.name, rawRows, t.Schema())
+	merged, err := t.rows.FetchRows(ctx, t.name, rawIter, t.Schema())
 	if err != nil {
 		return nil, err
 	}
@@ -109,18 +132,17 @@ func (t *Table) PartitionRows(ctx *gmssql.Context, _ gmssql.Partition) (gmssql.R
 		return nil, err
 	}
 
+	// Stream the final records as gmssql.Row without materialising a full
+	// []gmssql.Row slice. MapIter converts lazily on each Next() call.
 	cols := rows.SchemaColumns(t.Schema())
-	sqlRows := make([]gmssql.Row, len(final))
-	for i, rec := range final {
-		sqlRows[i] = rows.MapToRow(rec, cols)
-	}
-	return rows.NewIter(sqlRows), nil
+	return rows.NewMapIter(final, cols), nil
 }
 
-// fetchFromSource queries the source MySQL database for all rows of the table.
-// If db is nil (e.g. in unit tests), it returns an empty row slice without
-// error so that higher-level code can still exercise the overlay logic.
-func (t *Table) fetchFromSource(ctx *gmssql.Context) ([]gmssql.Row, error) {
+// fetchFromSource opens a streaming cursor over the source MySQL database.
+// Returns a RowIter that yields rows one at a time, avoiding materialisation
+// of the full result set. The caller must close the returned iterator.
+// If db is nil (e.g. in unit tests), it returns nil without error.
+func (t *Table) fetchFromSource(ctx *gmssql.Context) (gmssql.RowIter, error) {
 	if t.delta != nil && t.delta.Created {
 		return nil, nil // no source backing; all rows come from row delta
 	}
@@ -147,33 +169,8 @@ func (t *Table) fetchFromSource(ctx *gmssql.Context) ([]gmssql.Row, error) {
 	if err != nil {
 		return nil, fmt.Errorf("catalog: fetch from %q.%q: %w", t.dbName, sourceName, err)
 	}
-	defer dbRows.Close()
 
-	// Determine how many source columns the query returns (the non-added columns).
-	sourceColCount := len(cols)
-	var result []gmssql.Row
-	for dbRows.Next() {
-		vals := make([]any, sourceColCount)
-		ptrs := make([]any, sourceColCount)
-		for i := range vals {
-			ptrs[i] = &vals[i]
-		}
-		if err := dbRows.Scan(ptrs...); err != nil {
-			return nil, fmt.Errorf("catalog: scan row from %q.%q: %w", t.dbName, sourceName, err)
-		}
-		for i, v := range vals {
-			if b, ok := v.([]byte); ok {
-				vals[i] = string(b)
-			}
-		}
-		row := make(gmssql.Row, sourceColCount)
-		copy(row, vals)
-		result = append(result, row)
-	}
-	if err := dbRows.Err(); err != nil {
-		return nil, fmt.Errorf("catalog: rows error from %q.%q: %w", t.dbName, sourceName, err)
-	}
-	return result, nil
+	return &sourceRowIter{rows: dbRows}, nil
 }
 
 // sourceColumns returns the SELECT column fragments for fetchFromSource.
