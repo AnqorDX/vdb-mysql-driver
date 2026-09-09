@@ -1,7 +1,7 @@
 package session
 
 import (
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 
 	"github.com/virtual-db/vdb-mysql-driver/internal/auth"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"

@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"strings"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
-	"github.com/dolthub/go-mysql-server/sql/expression"
-	gmstypes "github.com/dolthub/go-mysql-server/sql/types"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
+	"github.com/AnqorDX/mysql-engine/expression"
+	gmstypes "github.com/AnqorDX/mysql-engine/types"
 	sqltypes "github.com/dolthub/vitess/go/sqltypes"
 
 	intschema "github.com/virtual-db/vdb-mysql-driver/internal/schema"

@@ -7,7 +7,7 @@ import (
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 	"github.com/dolthub/vitess/go/vt/sqlparser"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // castError converts any GMS error into a *vitessmysql.SQLError so Vitess

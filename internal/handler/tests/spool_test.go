@@ -5,8 +5,8 @@ import (
 	"io"
 	"testing"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
-	gmstypes "github.com/dolthub/go-mysql-server/sql/types"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
+	gmstypes "github.com/AnqorDX/mysql-engine/types"
 	"github.com/dolthub/vitess/go/sqltypes"
 
 	handler "github.com/virtual-db/vdb-mysql-driver/internal/handler"

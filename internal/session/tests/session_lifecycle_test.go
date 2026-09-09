@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 	vitessmysql "github.com/dolthub/vitess/go/mysql"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
 	"github.com/virtual-db/vdb-core/types"

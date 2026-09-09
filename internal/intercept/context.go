@@ -3,7 +3,7 @@ package intercept
 import (
 	"context"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // connIDFromCtx extracts the connection ID from a GMS sql.Context.

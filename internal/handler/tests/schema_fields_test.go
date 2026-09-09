@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
-	gmstypes "github.com/dolthub/go-mysql-server/sql/types"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
+	gmstypes "github.com/AnqorDX/mysql-engine/types"
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 
 	handler "github.com/virtual-db/vdb-mysql-driver/internal/handler"

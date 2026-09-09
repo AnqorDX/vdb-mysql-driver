@@ -11,7 +11,7 @@ import (
 	"github.com/dolthub/vitess/go/sqltypes"
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 
 	"github.com/virtual-db/vdb-mysql-driver/internal/session"
 )

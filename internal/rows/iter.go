@@ -3,7 +3,7 @@ package rows
 import (
 	"io"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // Iter wraps a []gmssql.Row slice to implement gmssql.RowIter.

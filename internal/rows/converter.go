@@ -3,7 +3,7 @@ package rows
 import (
 	"fmt"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // RowToMap converts a GMS sql.Row ([]interface{}) into a map[string]any using

@@ -1,7 +1,7 @@
 package catalog
 
 import (
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // SchemaDelta holds all structural mutations applied to one table within a

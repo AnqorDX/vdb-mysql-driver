@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // RowWriter dispatches INSERT, UPDATE, and DELETE operations to the row

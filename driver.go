@@ -10,7 +10,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
-	sqle "github.com/dolthub/go-mysql-server"
+	sqle "github.com/AnqorDX/mysql-engine"
 	vitessmysql "github.com/dolthub/vitess/go/mysql"
 	core "github.com/virtual-db/vdb-core"
 

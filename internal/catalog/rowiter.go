@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // sourceRowIter wraps a database/sql Rows result set and streams rows

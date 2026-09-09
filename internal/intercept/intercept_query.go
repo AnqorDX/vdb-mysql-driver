@@ -7,7 +7,7 @@ import (
 	sqltypes "github.com/dolthub/vitess/go/sqltypes"
 	sqlparser "github.com/dolthub/vitess/go/vt/sqlparser"
 
-	"github.com/dolthub/go-mysql-server/server"
+	"github.com/AnqorDX/mysql-engine/server"
 )
 
 // Query is called for each incoming text query, before it reaches the engine.

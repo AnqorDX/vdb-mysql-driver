@@ -14,7 +14,7 @@ import (
 	vitessmysql "github.com/dolthub/vitess/go/mysql"
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 )
 
 // CastError wraps the unexported castError function.

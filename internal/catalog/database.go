@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 	"github.com/virtual-db/vdb-mysql-driver/internal/rows"
 	intschema "github.com/virtual-db/vdb-mysql-driver/internal/schema"
 )

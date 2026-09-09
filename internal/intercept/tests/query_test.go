@@ -7,7 +7,7 @@ import (
 
 	. "github.com/virtual-db/vdb-mysql-driver/internal/intercept"
 
-	"github.com/dolthub/go-mysql-server/server"
+	"github.com/AnqorDX/mysql-engine/server"
 	vitessmysql "github.com/dolthub/vitess/go/mysql"
 	sqltypes "github.com/dolthub/vitess/go/sqltypes"
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"

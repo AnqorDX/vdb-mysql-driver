@@ -14,7 +14,7 @@ import (
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
 	"github.com/virtual-db/vdb-core/types"
 
-	"github.com/dolthub/go-mysql-server/server"
+	"github.com/AnqorDX/mysql-engine/server"
 )
 
 // ---------------------------------------------------------------------------

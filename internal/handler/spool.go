@@ -7,9 +7,9 @@ import (
 	"github.com/dolthub/vitess/go/sqltypes"
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 
-	"github.com/dolthub/go-mysql-server/server"
-	gmssql "github.com/dolthub/go-mysql-server/sql"
-	gmstypes "github.com/dolthub/go-mysql-server/sql/types"
+	"github.com/AnqorDX/mysql-engine/server"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
+	gmstypes "github.com/AnqorDX/mysql-engine/types"
 )
 
 // spoolResult dispatches to spoolOkResult or spoolRows depending on whether

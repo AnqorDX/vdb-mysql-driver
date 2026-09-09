@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	gmssql "github.com/dolthub/go-mysql-server/sql"
+	gmssql "github.com/AnqorDX/mysql-engine/sql"
 	rowspkg "github.com/virtual-db/vdb-mysql-driver/internal/rows"
 	schemapkg "github.com/virtual-db/vdb-mysql-driver/internal/schema"
 )

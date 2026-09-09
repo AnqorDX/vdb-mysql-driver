@@ -10,7 +10,7 @@ import (
 	querypb "github.com/dolthub/vitess/go/vt/proto/query"
 	"github.com/virtual-db/vdb-mysql-driver/internal/bridge"
 
-	"github.com/dolthub/go-mysql-server/server"
+	"github.com/AnqorDX/mysql-engine/server"
 )
 
 // Interceptor implements server.Interceptor to hook into the query lifecycle.
